@@ -6,6 +6,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-24.04
+
     steps:
       - uses: actions/checkout@v4
 
@@ -50,10 +51,10 @@ jobs:
           mkdir -p package/mods
           cp build-arm64/libGTA5CityUnlock.so package/mods/
           cd package
-          zip -r ../GTA5CityUnlock-AML-2.10-ARM64.zip .
+          zip -r ../GTA5CityUnlock-2.0-AML-2.10-ARM64.zip .
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: GTA5CityUnlock-AML-2.10-ARM64
-          path: GTA5CityUnlock-AML-2.10-ARM64.zip
+          name: GTA5CityUnlock-2.0-AML-2.10-ARM64
+          path: GTA5CityUnlock-2.0-AML-2.10-
