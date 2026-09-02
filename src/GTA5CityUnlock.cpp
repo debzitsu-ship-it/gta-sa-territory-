@@ -1,6 +1,6 @@
 
-#include <mod/amlmod.h>
-#include <mod/logger.h>
+#include <amlmod.h>
+#include <logger.h>
 
 #include <cstdint>
 
