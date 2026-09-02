@@ -1,8 +1,15 @@
-
 #include <amlmod.h>
-#include <logger.h>
 
+#include <android/log.h>
 #include <cstdint>
+
+#define LOG_TAG "GTA5CityUnlock"
+
+#define LOGI(...) \
+    __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
+
+#define LOGE(...) \
+    __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
 
 MYMOD(
     net.debzitsu.gta5cityunlock,
@@ -20,64 +27,55 @@ END_DEPLIST()
 namespace
 {
     // GTA SA 2.10 ARM64
-    constexpr uintptr_t OFF_FORBIDDEN_TERRITORY =
-        0x003CE724;
+    constexpr uintptr_t OFF_FORBIDDEN_TERRITORY = 0x003CE724;
 
     uintptr_t pGame = 0;
 
     /*
      * CGameLogic::SetPlayerWantedLevelForForbiddenTerritories(bool)
      *
-     * We deliberately do NOT call the original function.
+     * The original function automatically applies the wanted level
+     * when the player enters a forbidden territory.
      *
-     * This prevents the automatic wanted-level assignment caused
-     * by entering a forbidden territory.
-     *
-     * Normal wanted-level mechanics are not hooked here.
+     * We intentionally do not call the original function.
      */
     DECL_HOOKv(
         SetPlayerWantedLevelForForbiddenTerritories,
         bool
     )
     {
-        logger->Info(
-            "GTA5 City Unlock: forbidden-territory wanted trigger blocked"
-        );
-
+        LOGI("Forbidden-territory wanted trigger blocked");
         return;
     }
 }
 
 ON_MOD_PRELOAD()
 {
-    logger->SetTag("GTA5 City Unlock");
-    logger->Info("GTA5 City Unlock: preload");
+    LOGI("GTA5 City Unlock: preload");
 }
 
 ON_MOD_LOAD()
 {
-    logger->Info("GTA5 City Unlock: loading");
+    LOGI("GTA5 City Unlock: loading");
 
     pGame = aml->GetLib("libGTASA.so");
 
     if (!pGame)
     {
-        logger->Error(
-            "GTA5 City Unlock: libGTASA.so not found"
-        );
+        LOGE("GTA5 City Unlock: libGTASA.so not found");
         return;
     }
 
-    logger->Info(
-        "GTA5 City Unlock: libGTASA.so base = %p",
+    LOGI(
+        "libGTASA.so base = %p",
         reinterpret_cast<void*>(pGame)
     );
 
     const uintptr_t target =
         pGame + OFF_FORBIDDEN_TERRITORY;
 
-    logger->Info(
-        "GTA5 City Unlock: target = %p",
+    LOGI(
+        "Forbidden-territory target = %p",
         reinterpret_cast<void*>(target)
     );
 
@@ -86,14 +84,10 @@ ON_MOD_LOAD()
         target
     );
 
-    logger->Info(
-        "GTA5 City Unlock: hook installed"
-    );
+    LOGI("GTA5 City Unlock: hook installed");
 }
 
 ON_MOD_UNLOAD()
 {
-    logger->Info(
-        "GTA5 City Unlock: unloaded"
-    );
+    LOGI("GTA5 City Unlock: unloaded");
 }
