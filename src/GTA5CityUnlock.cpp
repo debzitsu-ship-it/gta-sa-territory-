@@ -13,7 +13,7 @@
 MYMOD(
     net.debzitsu.gta5cityunlock,
     GTA5 City Unlock,
-    1.1,
+    2.0,
     Debzitsu
 )
 
@@ -25,49 +25,59 @@ END_DEPLIST()
 
 namespace
 {
-    // GTA SA 2.10 ARM64
+    /*
+     * GTA SA Android 2.10 ARM64
+     *
+     * These RVAs are from the libGTASA.so supplied for this project.
+     */
+
     constexpr uintptr_t OFF_FORBIDDEN_TERRITORY =
         0x003CE724;
+
+    /*
+     * Territory-check code identified around the
+     * forbidden-territory wanted-level logic.
+     *
+     * This is kept separate from the wanted-level hook.
+     */
 
     DECL_HOOKv(
         SetPlayerWantedLevelForForbiddenTerritories,
         bool
     )
     {
-        // Suppress the automatic wanted level caused
-        // by entering a forbidden territory.
-        LOGI("Forbidden territory wanted trigger suppressed");
+        LOGI("CityUnlock: forbidden-territory wanted request blocked");
         return;
     }
 }
 
 ON_MOD_PRELOAD()
 {
-    LOGI("GTA5 City Unlock 1.1: preload");
+    LOGI("GTA5 City Unlock 2.0: preload");
 }
 
 ON_MOD_LOAD()
 {
-    LOGI("GTA5 City Unlock 1.1: loading");
+    LOGI("GTA5 City Unlock 2.0: loading");
 
     uintptr_t game = aml->GetLib("libGTASA.so");
 
     if (!game)
     {
-        LOGE("GTA5 City Unlock: libGTASA.so not found");
+        LOGE("CityUnlock: libGTASA.so not found");
         return;
     }
 
     LOGI(
-        "libGTASA.so base = %p",
+        "CityUnlock: libGTASA.so base = %p",
         reinterpret_cast<void*>(game)
     );
 
-    const uintptr_t target =
+    uintptr_t target =
         game + OFF_FORBIDDEN_TERRITORY;
 
     LOGI(
-        "Forbidden-territory target = %p",
+        "CityUnlock: forbidden-territory target = %p",
         reinterpret_cast<void*>(target)
     );
 
@@ -76,10 +86,10 @@ ON_MOD_LOAD()
         target
     );
 
-    LOGI("GTA5 City Unlock 1.1: hook installed");
+    LOGI("GTA5 City Unlock 2.0: hook installed");
 }
 
 ON_MOD_UNLOAD()
 {
-    LOGI("GTA5 City Unlock 1.1: unloaded");
+    LOGI("GTA5 City Unlock 2.0: unloaded");
 }
