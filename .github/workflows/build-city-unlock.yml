@@ -8,7 +8,8 @@ jobs:
     runs-on: ubuntu-24.04
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Install dependencies
         run: |
@@ -24,7 +25,8 @@ jobs:
 
       - name: Install Android NDK r27d
         run: |
-          wget -q https://dl.google.com/android/repository/android-ndk-r27d-linux.zip -O android-ndk.zip
+          wget -q https://dl.google.com/android/repository/android-ndk-r27d-linux.zip \
+            -O android-ndk.zip
           unzip -q android-ndk.zip
           echo "ANDROID_NDK_HOME=$GITHUB_WORKSPACE/android-ndk-r27d" >> "$GITHUB_ENV"
 
@@ -38,23 +40,27 @@ jobs:
             -DCMAKE_BUILD_TYPE=Release
 
       - name: Build
-        run: cmake --build build-arm64 --parallel
-
-      - name: Validate
         run: |
+          cmake --build build-arm64 --parallel
+
+      - name: Check build
+        run: |
+          set -eux
+          ls -lah build-arm64/
           file build-arm64/libGTA5CityUnlock.so
-          readelf -h build-arm64/libGTA5CityUnlock.so
-          ls -lh build-arm64/libGTA5CityUnlock.so
+          test -f build-arm64/libGTA5CityUnlock.so
 
-      - name: Package
+      - name: Create package
         run: |
+          set -eux
+          rm -rf package
           mkdir -p package/mods
           cp build-arm64/libGTA5CityUnlock.so package/mods/
+
+          echo "Package contents:"
+          find package -type f -ls
+
           cd package
           zip -r ../GTA5CityUnlock-2.0-AML-2.10-ARM64.zip .
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: GTA5CityUnlock-2.0-AML-2.10-ARM64
-          path: GTA5CityUnlock-2.0-AML-2.10-
+      -
