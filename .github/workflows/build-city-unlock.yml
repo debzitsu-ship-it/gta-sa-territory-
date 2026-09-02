@@ -63,4 +63,17 @@ jobs:
           cd package
           zip -r ../GTA5CityUnlock-2.0-AML-2.10-ARM64.zip .
 
-      -
+      - name: Check ZIP
+        run: |
+          set -eux
+          ls -lh GTA5CityUnlock-2.0-AML-2.10-ARM64.zip
+          unzip -l GTA5CityUnlock-2.0-AML-2.10-ARM64.zip
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: GTA5CityUnlock-2.0-AML-2.10-ARM64
+          path: |
+            GTA5CityUnlock-2.0-AML-2.10-ARM64.zip
+            build-arm64/libGTA5CityUnlock.so
+          if-no-files-found: error
