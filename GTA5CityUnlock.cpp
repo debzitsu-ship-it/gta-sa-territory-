@@ -1,52 +1,82 @@
-#include <amlmod.h>
-#include <android/log.h>
+#include <mod/amlmod.h>
+#include <mod/logger.h>
 #include <cstdint>
 
-#define LOG_TAG "GTA5CityUnlock"
-#define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
-#define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
+MYMOD(
+    net.debzitsu.gta5cityunlock,
+    GTA5 City Unlock,
+    2.0,
+    Debzitsu
+)
 
-MYMOD(net.debzitsu.gta5cityunlock, GTA5 City Unlock, 1.1, Debzitsu)
 NEEDGAME(com.rockstargames.gtasa)
 
 BEGIN_DEPLIST()
     ADD_DEPENDENCY_VER(net.rusjj.aml, 1.3.0)
 END_DEPLIST()
 
-namespace {
-constexpr uintptr_t OFF_FORBIDDEN_TERRITORY = 0x003CE724;
-
-DECL_HOOKv(SetPlayerWantedLevelForForbiddenTerritories, bool)
+namespace
 {
-    LOGI("Forbidden territory wanted trigger suppressed");
-    return;
-}
+    // GTA SA Android 2.10 ARM64 RVAs from the supplied libGTASA.so.
+    constexpr uintptr_t kGameLogicUpdateCall = 0x003CD660;
+    constexpr uintptr_t kForbiddenWantedFunction = 0x003CE724;
+    constexpr uintptr_t kDirectionCheck = 0x003CEF9C;
+
+    DECL_HOOKv(SetPlayerWantedLevelForForbiddenTerritories, bool)
+    {
+        // Deliberately do not call the original routine: it is the routine
+        // that raises the automatic forbidden-territory wanted level.
+        logger->Info("GTA5 City Unlock: forbidden-territory wanted trigger blocked");
+    }
+
+    DECL_HOOKb(IsPlayerAllowedToGoInThisDirection, void* self, float x, float y, float z, float extra)
+    {
+        // Allow the player through the game's directional territory gate.
+        // The original function's CVector is three floats, which are passed
+        // in floating-point registers on AArch64; this hook intentionally
+        // ignores those values.
+        (void)self;
+        (void)x;
+        (void)y;
+        (void)z;
+        (void)extra;
+        return true;
+    }
 }
 
 ON_MOD_PRELOAD()
 {
-    LOGI("GTA5 City Unlock 1.1: preload");
+    logger->SetTag("GTA5 City Unlock");
+    logger->Info("GTA5 City Unlock 2.0: preload");
 }
 
 ON_MOD_LOAD()
 {
-    LOGI("GTA5 City Unlock 1.1: loading");
-
     uintptr_t game = aml->GetLib("libGTASA.so");
-    if (!game) {
-        LOGE("GTA5 City Unlock: libGTASA.so not found");
+    if (!game)
+    {
+        logger->Error("GTA5 City Unlock: libGTASA.so not found");
         return;
     }
 
-    uintptr_t target = game + OFF_FORBIDDEN_TERRITORY;
-    LOGI("GTA5 City Unlock: target=%p", reinterpret_cast<void*>(target));
+    logger->Info("GTA5 City Unlock 2.0: libGTASA.so=%p", (void*)game);
 
-    HOOK(SetPlayerWantedLevelForForbiddenTerritories, target);
+    // 1) Remove the sole direct call in CGameLogic::Update() that invokes
+    //    SetPlayerWantedLevelForForbiddenTerritories().
+    aml->PlaceNOP(game + kGameLogicUpdateCall, 1);
 
-    LOGI("GTA5 City Unlock 1.1: hook installed");
+    // 2) Also hook the target routine itself as a second layer.
+    HOOK(SetPlayerWantedLevelForForbiddenTerritories,
+         game + kForbiddenWantedFunction);
+
+    // 3) Allow movement through the game's directional territory gate.
+    HOOK(IsPlayerAllowedToGoInThisDirection,
+         game + kDirectionCheck);
+
+    logger->Info("GTA5 City Unlock 2.0: patches/hooks installed");
 }
 
 ON_MOD_UNLOAD()
 {
-    LOGI("GTA5 City Unlock 1.1: unloaded");
+    logger->Info("GTA5 City Unlock 2.0: unloaded");
 }
