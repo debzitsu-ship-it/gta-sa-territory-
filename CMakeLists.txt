@@ -28,4 +28,7 @@ target_link_options(GTA5CityUnlock PRIVATE
     -Wl,-z,now
 )
 
-target_link_libraries(GTA5CityUnlock PRIVATE log android)
+target_link_libraries(GTA5CityUnlock PRIVATE
+    log
+    android
+)

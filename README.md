@@ -1,17 +1,13 @@
-# GTA5 City Unlock 2.0 — GTA SA Android 2.10 ARM64
+# GTA5 City Unlock 3.0 — GTA SA Android 2.10 ARM64
 
-AML native mod for the supplied GTA SA Android 2.10 ARM64 `libGTASA.so`.
+AML native mod for the supplied GTA SA 2.10 ARM64 `libGTASA.so`.
 
-This version uses three layers:
+This version uses the verified forbidden-territory wanted routine plus the island-unlocked stat and barrier-object model IDs. Barrier rendering and collision are suppressed for the two barrier model IDs found in the supplied binary.
 
-1. NOPs the only direct call found in `CGameLogic::Update()` to `SetPlayerWantedLevelForForbiddenTerritories(bool)` at RVA `0x003CD660`.
-2. Hooks `CGameLogic::SetPlayerWantedLevelForForbiddenTerritories(bool)` at RVA `0x003CE724` and suppresses its body.
-3. Hooks `CGameLogic::IsPlayerAllowedToGoInThisDirection(...)` at RVA `0x003CEF9C` and returns true.
+## Install
 
-Install the built `libGTA5CityUnlock.so` directly in:
+Copy `libGTA5CityUnlock.so` to:
 
 `Android_unprotected/data/com.rockstargames.gtasa/mods/`
 
-Do not replace `libGTASA.so` and do not modify/repack the APK.
-
-Important: the RVAs were derived from the supplied 2.10 ARM64 library. If the installed game uses a different library build, the offsets must be rechecked.
+Replace older versions rather than leaving multiple copies.
