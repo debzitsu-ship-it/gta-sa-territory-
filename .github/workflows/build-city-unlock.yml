@@ -46,6 +46,7 @@ jobs:
       - name: Validate
         run: |
           set -eux
+          test -f build-arm64/libGTA5CityUnlock.so
           file build-arm64/libGTA5CityUnlock.so
           readelf -h build-arm64/libGTA5CityUnlock.so
           ls -lh build-arm64/libGTA5CityUnlock.so
@@ -55,21 +56,19 @@ jobs:
           set -eux
           rm -rf package
           mkdir -p package/mods
-
           cp build-arm64/libGTA5CityUnlock.so package/mods/
-
           cd package
-          zip -r ../GTA5CityUnlock-3.0-AML-2.10-ARM64.zip .
+          zip -r ../GTA5CityUnlock-4.0-AML-2.10-ARM64.zip .
 
       - name: Verify package
         run: |
           set -eux
-          ls -lh GTA5CityUnlock-3.0-AML-2.10-ARM64.zip
-          unzip -l GTA5CityUnlock-3.0-AML-2.10-ARM64.zip
+          ls -lh GTA5CityUnlock-4.0-AML-2.10-ARM64.zip
+          unzip -l GTA5CityUnlock-4.0-AML-2.10-ARM64.zip
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: GTA5CityUnlock-3.0-AML-2.10-ARM64
-          path: GTA5CityUnlock-3.0-AML-2.10-ARM64.zip
+          name: GTA5CityUnlock-4.0-AML-2.10-ARM64
+          path: GTA5CityUnlock-4.0-AML-2.10-ARM64.zip
           if-no-files-found: error
