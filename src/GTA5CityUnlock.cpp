@@ -13,7 +13,7 @@
 MYMOD(
     net.debzitsu.gta5cityunlock,
     GTA5 City Unlock,
-    2.0,
+    3.0,
     Debzitsu
 )
 
@@ -25,40 +25,32 @@ END_DEPLIST()
 
 namespace
 {
-    /*
-     * GTA SA Android 2.10 ARM64
-     *
-     * These RVAs are from the libGTASA.so supplied for this project.
-     */
-
+    // GTA SA 2.10 ARM64
     constexpr uintptr_t OFF_FORBIDDEN_TERRITORY =
         0x003CE724;
 
     /*
-     * Territory-check code identified around the
-     * forbidden-territory wanted-level logic.
-     *
-     * This is kept separate from the wanted-level hook.
+     * Prevent the game from automatically assigning
+     * the forbidden-territory wanted level.
      */
-
     DECL_HOOKv(
         SetPlayerWantedLevelForForbiddenTerritories,
         bool
     )
     {
-        LOGI("CityUnlock: forbidden-territory wanted request blocked");
+        LOGI("CityUnlock: forbidden-territory wanted level blocked");
         return;
     }
 }
 
 ON_MOD_PRELOAD()
 {
-    LOGI("GTA5 City Unlock 2.0: preload");
+    LOGI("GTA5 City Unlock 3.0: preload");
 }
 
 ON_MOD_LOAD()
 {
-    LOGI("GTA5 City Unlock 2.0: loading");
+    LOGI("GTA5 City Unlock 3.0: loading");
 
     uintptr_t game = aml->GetLib("libGTASA.so");
 
@@ -77,7 +69,7 @@ ON_MOD_LOAD()
         game + OFF_FORBIDDEN_TERRITORY;
 
     LOGI(
-        "CityUnlock: forbidden-territory target = %p",
+        "CityUnlock: forbidden-territory function = %p",
         reinterpret_cast<void*>(target)
     );
 
@@ -86,10 +78,10 @@ ON_MOD_LOAD()
         target
     );
 
-    LOGI("GTA5 City Unlock 2.0: hook installed");
+    LOGI("GTA5 City Unlock 3.0: hook installed");
 }
 
 ON_MOD_UNLOAD()
 {
-    LOGI("GTA5 City Unlock 2.0: unloaded");
+    LOGI("GTA5 City Unlock 3.0: unloaded");
 }
