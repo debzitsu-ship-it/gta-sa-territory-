@@ -3,13 +3,14 @@
 #include <cstdint>
 
 #define LOG_TAG "GTA5CityUnlock"
-#define LOGI(...) __android_log_print(ANDROID_LOG_INFO,  LOG_TAG, __VA_ARGS__)
+
+#define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
 
 MYMOD(
     net.debzitsu.gta5cityunlock,
     GTA5 City Unlock,
-    3.0,
+    4.0,
     Debzitsu
 )
 
@@ -19,121 +20,118 @@ BEGIN_DEPLIST()
     ADD_DEPENDENCY_VER(net.rusjj.aml, 1.3.0)
 END_DEPLIST()
 
-namespace {
-    // Exact RVAs from the supplied GTA SA 2.10 ARM64 libGTASA.so.
-    constexpr uintptr_t OFF_SET_WANTED_FOR_FORBIDDEN = 0x003CE724;
-    constexpr uintptr_t OFF_GET_STAT_VALUE            = 0x004FADBC;
-    constexpr uintptr_t OFF_SET_STAT_VALUE            = 0x004FAA40;
-    constexpr uintptr_t OFF_ENTITY_RENDER             = 0x004CDC90; // CEntity::Remove is here; Render is below.
-    constexpr uintptr_t OFF_ENTITY_RENDER_REAL        = 0x004CD2B0; // CEntity::IsVisible; kept for reference only.
-    constexpr uintptr_t OFF_COBJECT_RENDER            = 0x0053E0F0;
-    constexpr uintptr_t OFF_CPHYSICAL_TEST_COLLISION  = 0x004E532C;
+namespace
+{
+    // GTA SA 2.10 ARM64 - exact libGTASA.so supplied for this project.
+    constexpr uintptr_t OFF_FORBIDDEN_TERRITORY =
+        0x003CE724;
 
-    // Model-index globals in the supplied binary.
-    constexpr uintptr_t OFF_MI_ROADWORKBARRIER1 = 0x00886204;
-    constexpr uintptr_t OFF_MI_BARRIER1          = 0x00886262;
+    // CIplStore functions identified in the supplied libGTASA.so.
+    constexpr uintptr_t OFF_FIND_IPL_SLOT =
+        0x0033B568;
 
-    // GTA SA stat 181 is the islands-unlocked stat.
-    constexpr unsigned short STAT_CITY_UNLOCKED = 181;
+    constexpr uintptr_t OFF_REQUEST_IPL_AND_IGNORE =
+        0x0033D20C;
 
-    uint16_t gBarrier1 = 0xFFFF;
-    uint16_t gRoadworkBarrier1 = 0xFFFF;
+    constexpr uintptr_t OFF_REMOVE_IPL_AND_IGNORE =
+        0x0033D26C;
 
-    static inline uint16_t GetModelIndex(void* self) {
-        // CEntity::m_nModelIndex is 0x22 in the SA entity layout.
-        return *reinterpret_cast<uint16_t*>(reinterpret_cast<uintptr_t>(self) + 0x22);
-    }
+    using FindIplSlotFn = int (*)(const char*);
+    using RemoveIplAndIgnoreFn = void (*)(int);
 
-    static inline bool IsIslandBarrier(void* self) {
-        if (!self) return false;
-        const uint16_t model = GetModelIndex(self);
-        return model == gBarrier1 || model == gRoadworkBarrier1;
-    }
+    int gBarriers1 = -1;
+    int gBarriers2 = -1;
 
-    // Block the game's forbidden-territory 4-star routine.
-    DECL_HOOKv(SetPlayerWantedLevelForForbiddenTerritories, bool)
+    DECL_HOOKv(RequestIplAndIgnore, int iplSlot)
     {
-        return;
-    }
-
-    // Make the game believe all islands are unlocked wherever this stat is queried.
-    DECL_HOOK(float, GetStatValue, unsigned short stat)
-    {
-        if (stat == STAT_CITY_UNLOCKED)
-            return 4.0f;
-
-        return GetStatValue(stat);
-    }
-
-    // Keep scripts from changing the islands-unlocked stat back to a locked value.
-    DECL_HOOKv(SetStatValue, unsigned short stat, float value)
-    {
-        if (stat == STAT_CITY_UNLOCKED) {
-            SetStatValue(stat, 4.0f);
+        if (iplSlot == gBarriers1 || iplSlot == gBarriers2)
+        {
+            LOGI("CityUnlock: blocked request for barrier IPL slot %d", iplSlot);
             return;
         }
 
-        SetStatValue(stat, value);
-    }
-
-    // Island barricades are CObject instances. Suppress their rendering.
-    DECL_HOOKv(CObjectRender, void* self)
-    {
-        if (IsIslandBarrier(self))
-            return;
-
-        CObjectRender(self);
-    }
-
-    // Suppress collision against the barrier objects.
-    DECL_HOOKb(CPhysicalTestCollision, void* self, bool applySpeed)
-    {
-        if (IsIslandBarrier(self))
-            return false;
-
-        return CPhysicalTestCollision(self, applySpeed);
+        RequestIplAndIgnore(iplSlot);
     }
 }
 
 ON_MOD_PRELOAD()
 {
-    LOGI("GTA5 City Unlock 3.0: preload");
+    LOGI("GTA5 City Unlock 4.0: preload");
 }
 
 ON_MOD_LOAD()
 {
-    LOGI("GTA5 City Unlock 3.0: loading");
+    LOGI("GTA5 City Unlock 4.0: loading");
 
-    uintptr_t game = aml->GetLib("libGTASA.so");
-    if (!game) {
-        LOGE("libGTASA.so not found");
+    const uintptr_t game = aml->GetLib("libGTASA.so");
+
+    if (!game)
+    {
+        LOGE("CityUnlock: libGTASA.so not found");
         return;
     }
 
-    // These globals contain the actual runtime model IDs after game initialization.
-    gRoadworkBarrier1 = *reinterpret_cast<uint16_t*>(game + OFF_MI_ROADWORKBARRIER1);
-    gBarrier1 = *reinterpret_cast<uint16_t*>(game + OFF_MI_BARRIER1);
+    LOGI("CityUnlock: libGTASA.so base = %p",
+         reinterpret_cast<void*>(game));
 
-    LOGI("Barrier model IDs: MI_BARRIER1=%u MI_ROADWORKBARRIER1=%u",
-         static_cast<unsigned>(gBarrier1),
-         static_cast<unsigned>(gRoadworkBarrier1));
+    /*
+     * 1. Permanently suppress the forbidden-territory wanted routine.
+     *
+     * The function itself checks the city-unlock stat and assigns
+     * wanted level 4 when the player enters a locked city.
+     */
+    aml->PlaceRET(game + OFF_FORBIDDEN_TERRITORY);
 
-    // Force the islands-unlocked state and prevent later script changes from relocking it.
-    HOOK(GetStatValue, game + OFF_GET_STAT_VALUE);
-    HOOK(SetStatValue, game + OFF_SET_STAT_VALUE);
+    LOGI("CityUnlock: forbidden-territory routine patched");
 
-    // Extra protection against the explicit forbidden-territory wanted routine.
-    HOOK(SetPlayerWantedLevelForForbiddenTerritories,
-         game + OFF_SET_WANTED_FOR_FORBIDDEN);
+    /*
+     * 2. Find the actual binary IPL slots used by the map.
+     *
+     * The game's object groups are named BARRIERS1 and BARRIERS2
+     * in the script layer; CIplStore::FindIplSlot performs a
+     * case-insensitive lookup.
+     */
+    auto FindIplSlot =
+        reinterpret_cast<FindIplSlotFn>(game + OFF_FIND_IPL_SLOT);
 
-    // Remove the physical/visual barrier objects without touching unrelated objects.
-    HOOK(CObjectRender, game + OFF_COBJECT_RENDER);
-    HOOK(CPhysicalTestCollision, game + OFF_CPHYSICAL_TEST_COLLISION);
+    gBarriers1 = FindIplSlot("barriers1");
+    gBarriers2 = FindIplSlot("barriers2");
 
-    LOGI("GTA5 City Unlock 3.0: all hooks installed");
+    LOGI("CityUnlock: barriers1 slot = %d", gBarriers1);
+    LOGI("CityUnlock: barriers2 slot = %d", gBarriers2);
+
+    /*
+     * 3. Remove the barrier IPLs immediately.
+     *
+     * RemoveIplAndIgnore unloads the IPL and marks it so the normal
+     * streaming/request path does not immediately bring it back.
+     */
+    auto RemoveIplAndIgnore =
+        reinterpret_cast<RemoveIplAndIgnoreFn>(
+            game + OFF_REMOVE_IPL_AND_IGNORE
+        );
+
+    if (gBarriers1 >= 0)
+        RemoveIplAndIgnore(gBarriers1);
+
+    if (gBarriers2 >= 0)
+        RemoveIplAndIgnore(gBarriers2);
+
+    /*
+     * 4. Block future requests for those same IPLs.
+     *
+     * This covers script-side REQUEST_IPL calls after our initial
+     * removal.
+     */
+    HOOK(
+        RequestIplAndIgnore,
+        game + OFF_REQUEST_IPL_AND_IGNORE
+    );
+
+    LOGI("GTA5 City Unlock 4.0: barrier IPL protection installed");
 }
 
 ON_MOD_UNLOAD()
 {
-    LOGI("GTA5 City Unlock 3.0: unloaded");
+    LOGI("GTA5 City Unlock 4.0: unloaded");
 }

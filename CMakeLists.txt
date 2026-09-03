@@ -8,7 +8,9 @@ if(NOT AML_ROOT)
     message(FATAL_ERROR "AML_ROOT is required")
 endif()
 
-add_library(GTA5CityUnlock SHARED src/GTA5CityUnlock.cpp)
+add_library(GTA5CityUnlock SHARED
+    src/GTA5CityUnlock.cpp
+)
 
 target_include_directories(GTA5CityUnlock PRIVATE
     "${AML_ROOT}/mod"
